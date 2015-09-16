@@ -32,14 +32,14 @@ const kml = kmlStart + kmlOverlay + kmlEnd
 
 // HeatmapKML generates a heatmap for geographical data and the kml required to render it.
 func HeatmapKML(size image.Rectangle, points []DataPoint, dotSize int, opacity uint8,
-	scheme []color.Color, imgurl string, out io.Writer) (image.Image, error) {
+	scheme []color.Color, imgurl string, out io.Writer, transform bool) (image.Image, error) {
 
 	limits := findLimits(points)
 	if !limits.inRange(-180, 180, -90, 90) {
 		return nil, errors.New("limits out of range")
 	}
 
-	mapimg := Heatmap(size, points, dotSize, opacity, scheme)
+	mapimg := Heatmap(size, points, dotSize, opacity, scheme, transform)
 
 	adjustedLimits := adjustLimits(limits, size, dotSize)
 
@@ -68,7 +68,7 @@ func HeatmapKMZ(size image.Rectangle, points []DataPoint, dotSize int, opacity u
 	must(err) // no known condition can cause failure here
 
 	img, err := HeatmapKML(size, points, dotSize, opacity, scheme,
-		"heatmap.png", dockml)
+		"heatmap.png", dockml, true)
 	if err != nil {
 		return err
 	}
