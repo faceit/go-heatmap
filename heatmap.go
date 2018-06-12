@@ -61,16 +61,22 @@ func (l limits) Dy() float64 {
 // dotSize is the impact size of each point on the output
 // opacity is the alpha value (0-255) of the impact of the image overlay
 // scheme is the color palette to choose from the overlay
+// transform is whether to transform points automatically so they fit within the
+//   image rather than assuming they're already mapped to pixels
 func Heatmap(size image.Rectangle, points []DataPoint, dotSize int, opacity uint8,
-	scheme []color.Color) image.Image {
+	scheme []color.Color, transform bool) image.Image {
 
 	dot := mkDot(float64(dotSize))
 
-	limits := findLimits(points)
+	limits := limits{}
+
+	if transform {
+		limits = findLimits(points)
+	}
 
 	// Draw black/alpha into the image
 	bw := image.NewRGBA(size)
-	placePoints(size, limits, bw, points, dot)
+	placePoints(size, limits, bw, points, dot, transform)
 
 	rv := image.NewRGBA(size)
 
@@ -80,9 +86,9 @@ func Heatmap(size image.Rectangle, points []DataPoint, dotSize int, opacity uint
 }
 
 func placePoints(size image.Rectangle, limits limits,
-	bw *image.RGBA, points []DataPoint, dot draw.Image) {
+	bw *image.RGBA, points []DataPoint, dot draw.Image, transform bool) {
 	for _, p := range points {
-		limits.placePoint(p, bw, dot)
+		limits.placePoint(p, bw, dot, transform)
 	}
 }
 
@@ -162,8 +168,13 @@ func (l limits) translate(p DataPoint, i draw.Image, dotsize int) (rv image.Poin
 	return
 }
 
-func (l limits) placePoint(p DataPoint, i, dot draw.Image) {
-	pos := l.translate(p, i, dot.Bounds().Max.X)
+func (l limits) placePoint(p DataPoint, i, dot draw.Image, transform bool) {
+	var pos image.Point
+	if transform {
+		pos = l.translate(p, i, dot.Bounds().Max.X)
+	} else {
+		pos = image.Point{X: int(p.X()), Y: int(p.Y())}
+	}
 	dotw, doth := dot.Bounds().Max.X, dot.Bounds().Max.Y
 	draw.Draw(i, image.Rect(pos.X, pos.Y, pos.X+dotw, pos.Y+doth), dot,
 		image.ZP, draw.Over)
